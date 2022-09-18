@@ -36,4 +36,4 @@ class User(BaseModel, Base):
 
     @password.setter
     def pwd(self, password):
-        self.password = hashlib.md5(pwd)
+        self.password = hashlib.md5(pwd.encode())
