@@ -28,14 +28,4 @@ class User(BaseModel, Base):
     def __init__(self, *args, **kwargs):
         """initializes user"""
         super().__init__(*args, **kwargs)
-
-    @property
-    def password(self):
-        """property decorator for password"""
-        return self.password
-
-    @password.setter
-    def pwd(self, password):
-        """setter function to hash pwd"""
-        pwd = hashlib.md5(password).hexdigest()
-        password = pwd
+        self.password = hashlib.md5(self.password.encode()).hexdigest()

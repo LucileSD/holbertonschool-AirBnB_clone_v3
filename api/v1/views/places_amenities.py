@@ -6,11 +6,12 @@ from models.place import Place
 from models.amenity import Amenity
 from models import storage, storage_t
 
+
 @app_views.route("places/<place_id>/amenities", methods=['GET'],
                  strict_slashes=False)
 def allAmenities(place_id):
     """list all amenities of a place"""
-    amenity_list=[]
+    amenity_list = []
     place = storage.get(Place, place_id)
     if place is None:
         abort(404)
@@ -21,7 +22,7 @@ def allAmenities(place_id):
 
 @app_views.route("/places/<place_id>/amenities/<amenity_id>",
                  methods=['DELETE'], strict_slashes=False)
-def places_amenity_delete(place_id, amenity_id):
+def place_amenity_delete(place_id, amenity_id):
     """Delete a amenity object"""
     place = storage.get(Place, place_id)
     if place is None:
@@ -53,7 +54,11 @@ def place_amenity_post(place_id, amenity_id):
         abort(404)
     if storage_t == "db":
         if amenity in place.amenities:
-            return amenity, 200
+            return jsonify(amenity.to_dict())
+        place.amenities.append(amenity)
     else:
         if amenity.id in place.amenity_ids:
-            return amenity, 200
+            return jsonify(amenity.to_dict())
+        place.amenity_ids.append(amenity.id)
+    storage.save()
+    return jsonify(amenity.to_dict()), 201

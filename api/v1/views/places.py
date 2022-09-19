@@ -6,6 +6,8 @@ from models.place import Place
 from models.city import City
 from models.user import User
 from models import storage
+from models.state import State
+from models.amenity import Amenity
 
 
 @app_views.route("/cities/<city_id>/places", methods=['GET'],
@@ -82,3 +84,50 @@ def places_put(places_id):
             setattr(place, key, value)
     storage.save()
     return place.to_dict(), 200
+
+
+@app_views.route("/places_search", methods=['POST'],
+                 strict_slashes=False)
+def search_place():
+    """Search places, filtering by state, city and amenities"""
+    body = request.get_json()
+    if body is None:
+        abort(400, "Not a JSON")
+    places = []
+    states_id_list = body.get('states')
+    cities_list = []
+    if (states_id_list):
+        for id in states_id_list:
+            state = storage.get(State, id)
+            if (state is not None):
+                cities_list.append(state.cities)
+                for city in state.cities:
+                    for place in city.places:
+                        places.append(place)
+    cities_id_list = body.get('cities')
+    if (cities_id_list):
+        for id in cities_id_list:
+            city = storage.get(City, id)
+            if city is not None and city not in cities_list:
+                for place in city.places:
+                    places.append(place)
+    if (len(places) == 0):
+        places = list(storage.all(Place).values())
+    amenities_id_list = body.get('amenities')
+    for place in places:
+        place_amenities = place.amenities
+        for id in amenities_id_list:
+            check = 0
+            for amenity in place_amenities:
+                if (id == amenity.id):
+                    check = 1
+                    break
+            if (check == 0):
+                places.remove(place)
+                break
+
+    for i in range(len(places)):
+        places[i] = places[i].to_dict()
+        if 'amenities' in places[i].keys():
+            places[i].pop('amenities')
+    return jsonify(places)
