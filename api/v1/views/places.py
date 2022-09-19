@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""places file"""
+"""Flask api module for places"""
 from api.v1.views import app_views
 from flask import jsonify, request, abort
 from models.place import Place
@@ -92,7 +92,7 @@ def search_place():
     """Search places, filtering by state, city and amenities"""
     body = request.get_json()
     if body is None:
-        abort(400, "Not a JSON")
+        return 'Not a JSON', 400
     places = []
     states_id_list = body.get('states')
     cities_list = []
@@ -100,32 +100,33 @@ def search_place():
         for id in states_id_list:
             state = storage.get(State, id)
             if (state is not None):
-                cities_list.append(state.cities)
                 for city in state.cities:
-                    for place in city.places:
-                        places.append(place)
+                    cities_list.append(city)
     cities_id_list = body.get('cities')
     if (cities_id_list):
         for id in cities_id_list:
             city = storage.get(City, id)
             if city is not None and city not in cities_list:
-                for place in city.places:
-                    places.append(place)
-    if (len(places) == 0):
-        places = list(storage.all(Place).values())
-    amenities_id_list = body.get('amenities')
+                cities_list.append(city)
+    if (len(cities_list) == 0):
+        for place in storage.all(Place).values():
+            places.append(place)
+    else:
+        for city in cities_list:
+            for place in city.places:
+                places.append(place)
+    places_cleared = places.copy()
     for place in places:
-        place_amenities = place.amenities
-        for id in amenities_id_list:
-            check = 0
-            for amenity in place_amenities:
-                if (id == amenity.id):
+        check = 0
+        if body.get('amenities'):
+            for id in body.get('amenities'):
+                curr_amenity = storage.get(Amenity, id)
+                if (curr_amenity and curr_amenity not in place.amenities):
                     check = 1
                     break
-            if (check == 0):
-                places.remove(place)
-                break
-
+        if check == 1:
+            places_cleared.remove(place)
+    places = places_cleared
     for i in range(len(places)):
         places[i] = places[i].to_dict()
         if 'amenities' in places[i].keys():
